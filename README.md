@@ -9,7 +9,9 @@ watch dates, follows→active, archived→abandoned, and completed shows correct
 — titles with no TMDB entry (upcoming/unreleased), or shows TMDB reclassified as movies — these
 are reported at the end of the run; watched items are essentially always resolvable.
 
-- **Input:** a TV Time GDPR export (request via the app; arrives as a `.zip` of ~50 CSVs)
+- **Input:** a TV Time GDPR export — request it at
+  [gdpr.tvtime.com/gdpr/self-service](https://gdpr.tvtime.com/gdpr/self-service); arrives by email
+  as a `.zip` of ~50 CSVs
 - **Output:** `couchtimes-import-tvtime.couchtimes`
 - **Script:** `tvtime_to_couchtimes.py` — stdlib only, no dependencies
 
