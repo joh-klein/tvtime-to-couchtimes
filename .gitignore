@@ -3,6 +3,9 @@ tvtime-gdpr-data/
 *.zip
 *.couchtimes
 
+# Your personal movie-id overrides (copy movie_aliases.example.json to start)
+movie_aliases.json
+
 # TMDB response cache (regenerated on run)
 .tmdb-cache/
 

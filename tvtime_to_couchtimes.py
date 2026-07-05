@@ -121,18 +121,25 @@ def find_tmdb_show(tvdb_id, name):
     return None
 
 
-# TV Time stored English titles TMDB can't match; pin these to the right TMDB id.
-MOVIE_ALIASES = {
-    "Shark Alarm at Müggel Lake": 185562,  # Hai-Alarm am Müggelsee (2013)
-    "Sun Alley": 2241,                     # Sonnenallee (1999)
-}
+def load_aliases():
+    """name -> TMDB movie id overrides, for titles TMDB can't match by title+year (common for
+    non-English films stored under a translated title). Reads --aliases PATH, else a
+    movie_aliases.json next to the export or the script. Empty if none. See movie_aliases.example.json."""
+    path = arg("--aliases")
+    if not path:
+        path = next((c for c in ("movie_aliases.json", os.path.join(HERE, "movie_aliases.json"))
+                     if os.path.isfile(c)), None)
+    if not path:
+        return {}
+    with open(path, encoding="utf-8") as f:
+        return {k: int(v) for k, v in json.load(f).items() if not k.startswith("_")}
 
 
-def find_tmdb_movie(name, year):
+def find_tmdb_movie(name, year, aliases):
     """Movie title (+ release year) -> TMDB movie id. Movies have no id in the export,
     so disambiguate by exact release year before falling back to most-popular."""
-    if name in MOVIE_ALIASES:
-        return MOVIE_ALIASES[name]
+    if name in aliases:
+        return aliases[name]
     if year:
         r = tmdb("search/movie", query=name, year=year)
         if r and r.get("results"):
@@ -420,11 +427,12 @@ def main():
             print(f"  [{i}/{len(tvdb_ids)}] {name[:40]} -> tmdb {tmdb_id}  (added {added}, merged {merged})")
 
     if not only and "--no-movies" not in sys.argv:
+        aliases = load_aliases()
         movies = read_movies(export)
-        print(f"\nresolving {len(movies)} movies via TMDB ...")
+        print(f"\nresolving {len(movies)} movies via TMDB ...", f"({len(aliases)} aliases)" if aliases else "")
         m_added = m_miss = 0; m_misses = []; seen = set()
         for i, m in enumerate(movies.values(), 1):
-            mid = find_tmdb_movie(m["name"], m["year"])
+            mid = find_tmdb_movie(m["name"], m["year"], aliases)
             if not mid or mid in seen:
                 if not mid:
                     m_miss += 1; m_misses.append(m["name"])
@@ -439,6 +447,8 @@ def main():
         if m_misses:
             print("  unresolved movies: " + ", ".join(m_misses[:20]) +
                   (" ..." if len(m_misses) > 20 else ""))
+            print("  -> to fix, add \"Title\": <tmdb-id> to movie_aliases.json "
+                  "(look ids up at themoviedb.org). See movie_aliases.example.json.")
 
     out_name = ("couchtimes-TEST.couchtimes" if only
                 else "couchtimes-import-tvtime.couchtimes")

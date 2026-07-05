@@ -58,8 +58,23 @@ shows keyed by TMDB show id, movies by TMDB movie id.
 
 **ID mapping:** TV Time stores **TheTVDB** ids; CouchTimes needs **TMDB**. Shows resolve
 exactly via `/find?external_source=tvdb_id`. Movies have **no id** in the export, so they
-resolve by **title + release year** search (`MOVIE_ALIASES` pins a few English titles TMDB
-can't match, e.g. German films).
+resolve by **title + release year** search.
+
+### Movies TMDB can't match
+
+A few movies won't resolve by title+year — usually non-English films TV Time stored under a
+translated title (e.g. *Sonnenallee* exported as "Sun Alley"), or unreleased titles with no TMDB
+entry yet. The run prints any unresolved movies at the end. To fix them, copy
+`movie_aliases.example.json` to `movie_aliases.json` and map each title (**exactly as TV Time
+exported it**) to its TMDB movie id — the number in `themoviedb.org/movie/<id>`:
+
+```json
+{ "Sun Alley": 2241, "Shark Alarm at Müggel Lake": 185562 }
+```
+
+Re-run; the cache makes it instant. The script auto-loads `movie_aliases.json` from the current
+directory (or pass `--aliases <path>`). Watched movies almost always resolve; misses are typically
+watchlist/upcoming titles, so nothing you've actually seen is lost.
 
 **Not imported** (the format can't hold it): episode-level watch dates, custom lists, favorites
 (TV Time exports `is_favorited=0` for everything), ratings. See [FORMAT.md](FORMAT.md).

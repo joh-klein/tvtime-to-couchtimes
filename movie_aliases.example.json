@@ -1,0 +1,5 @@
+{
+  "_comment": "Copy this to movie_aliases.json for movies TMDB can't match by title+year (common for non-English films stored under a translated title). Map the title exactly as TV Time exported it to its TMDB movie id (from the URL: themoviedb.org/movie/<id>). Remove this _comment line.",
+  "Shark Alarm at Müggel Lake": 185562,
+  "Sun Alley": 2241
+}
