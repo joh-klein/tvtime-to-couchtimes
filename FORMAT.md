@@ -21,13 +21,18 @@ open("out.couchtimes", "wb").write(co.compress(payload) + co.flush())
 
 ```jsonc
 {
-  "appVersion":     "…",   // reuse from a real backup — a mismatch is rejected on restore
-  "exportDate":     "2026-07-05T…Z",
-  "schemaVersion":   N,     // reuse from a real backup
-  "shows":  [ … ],          // keyed conceptually by TMDB show id
-  "movies": [ … ]           // keyed conceptually by TMDB movie id
+  "appVersion":     "2.1.0.366",       // observed value; probably cosmetic
+  "exportDate":     "2026-07-05T…Z",   // ISO-8601 UTC
+  "schemaVersion":   1,                 // the field most likely to be validated on restore
+  "shows":  [ … ],                      // keyed conceptually by TMDB show id
+  "movies": [ … ]                       // keyed conceptually by TMDB movie id
 }
 ```
+
+Whether the app strictly validates `appVersion`/`schemaVersion` is **unconfirmed** — reusing a
+real backup's envelope is simply the safe path. The known-good values above (CouchTimes 2.1.0.366)
+work as of writing; if a future version bumps `schemaVersion`, export a fresh backup and reuse its
+envelope instead.
 
 Restore is a **full replace** — it wipes existing app data, it does not merge.
 

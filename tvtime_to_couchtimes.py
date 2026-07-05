@@ -14,9 +14,19 @@ Usage:
 ponytail: stdlib only, disk-cached, resumable. No requests/pandas.
 """
 import csv, io, json, os, re, sys, time, zipfile, zlib, urllib.request, urllib.error, urllib.parse
+from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(HERE, ".tmdb-cache")
+
+# The backup envelope. Reusing a real backup's values is the safest path, but these known-good
+# values (from CouchTimes 2.1.0.366) let you skip that step. If a future app version bumps
+# schemaVersion and rejects the result, pass --backup <your.couchtimes> to reuse its envelope.
+DEFAULT_ENVELOPE = {"appVersion": "2.1.0.366", "schemaVersion": 1}
+
+
+def utcnow_iso():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 TOKEN = os.environ.get("TMDB_TOKEN", "").strip()
 IS_V4 = TOKEN.startswith("eyJ")  # v4 bearer tokens are JWTs
 csv.field_size_limit(10_000_000)
@@ -362,17 +372,18 @@ def main():
     if not TOKEN:
         die("set TMDB_TOKEN env var (v4 read-access-token or v3 api key)")
 
-    backup_in = arg("--backup") or os.environ.get("COUCHTIMES_BACKUP")
-    if not backup_in or not os.path.isfile(backup_in):
-        die("pass --backup <your.couchtimes> (or set COUCHTIMES_BACKUP): export a backup from "
-            "CouchTimes first — its envelope (appVersion/schemaVersion) is reused so the app "
-            "accepts the result.")
     export = Export(find_export())
     print(f"reading export: {export.path}" + (" (zip)" if export.zip is not None else " (dir)"))
 
-    backup = json.loads(zlib.decompress(open(backup_in, "rb").read(), -15))
-    now = backup["exportDate"]
-    backup["shows"] = []          # existing shows/movies are throwaway; keep only the envelope
+    backup_in = arg("--backup") or os.environ.get("COUCHTIMES_BACKUP")
+    if backup_in:  # override: reuse an exported backup's envelope (existing shows/movies discarded)
+        if not os.path.isfile(backup_in):
+            die(f"--backup not found: {backup_in}")
+        backup = json.loads(zlib.decompress(open(backup_in, "rb").read(), -15))
+    else:
+        backup = dict(DEFAULT_ENVELOPE)
+    now = backup["exportDate"] = utcnow_iso()
+    backup["shows"] = []
     backup["movies"] = []
     by_tmdb = {}                  # merge_into_existing still dedups TVDB ids sharing one TMDB show
 

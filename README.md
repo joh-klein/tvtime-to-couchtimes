@@ -22,16 +22,16 @@ are reported at the end of the run; watched items are essentially always resolva
 ```bash
 export TMDB_TOKEN="<TMDB v4 Read Access Token>"   # free: themoviedb.org/settings/api
 
-# --export takes the GDPR .zip directly (or an unpacked dir); --backup is a backup you
-# exported from CouchTimes, reused as the envelope so the app accepts the result.
-python3 tvtime_to_couchtimes.py --export tv-time-export.zip --backup my.couchtimes --test-tvdb 71814
-python3 tvtime_to_couchtimes.py --export tv-time-export.zip --backup my.couchtimes
+python3 tvtime_to_couchtimes.py --export tv-time-export.zip --test-tvdb 71814  # one show first
+python3 tvtime_to_couchtimes.py --export tv-time-export.zip                     # full run
 ```
 
 `--export` accepts the raw GDPR **zip** (CSVs are read straight out of it, nested folders and all)
 or an unpacked directory. It defaults to a `tvtime-gdpr-data/` dir or a lone `*.zip` in the cwd.
-`--backup`/`$COUCHTIMES_BACKUP` is required: export any backup from CouchTimes once, so its
-`appVersion`/`schemaVersion` envelope is reused (the app rejects a mismatched envelope).
+
+The output uses a built-in backup envelope (CouchTimes 2.1.0.366) so **you don't need to export a
+backup first**. If a future app version rejects it, export any backup from CouchTimes and pass
+`--backup <your.couchtimes>` (or set `$COUCHTIMES_BACKUP`) to reuse its envelope instead.
 
 Then in CouchTimes: **restore** `couchtimes-import-tvtime.couchtimes`.
 ⚠️ Restore is a **full replace** — it wipes existing app data.
