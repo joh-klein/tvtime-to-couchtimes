@@ -57,24 +57,26 @@ shows keyed by TMDB show id, movies by TMDB movie id.
 | latest watch timestamp per show | `lastEpisodeWatchedDate` (**required** — see gotchas) |
 
 **ID mapping:** TV Time stores **TheTVDB** ids; CouchTimes needs **TMDB**. Shows resolve
-exactly via `/find?external_source=tvdb_id`. Movies have **no id** in the export, so they
-resolve by **title + release year** search.
+exactly via `/find?external_source=tvdb_id`. Movies have **no id** in the export, so they resolve
+by **title + release year** search, then — if that comes up empty — via **IMDB**: IMDB's
+suggestion API indexes the alternate/translated titles TMDB search misses (e.g. *Sonnenallee*
+exported as "Sun Alley"), giving an `tt` id that TMDB's `/find?external_source=imdb_id` maps to a
+TMDB id. This resolves the translated-title case automatically, no manual work.
 
-### Movies TMDB can't match
+### Movies that still don't resolve
 
-A few movies won't resolve by title+year — usually non-English films TV Time stored under a
-translated title (e.g. *Sonnenallee* exported as "Sun Alley"), or unreleased titles with no TMDB
-entry yet. The run prints any unresolved movies at the end. To fix them, copy
-`movie_aliases.example.json` to `movie_aliases.json` and map each title (**exactly as TV Time
-exported it**) to its TMDB movie id — the number in `themoviedb.org/movie/<id>`:
+If both TMDB and IMDB come up empty — usually unreleased titles with no database entry yet — the
+run prints them at the end. To pin one by hand, copy `movie_aliases.example.json` to
+`movie_aliases.json` and map the title (**exactly as TV Time exported it**) to its TMDB movie id
+(the number in `themoviedb.org/movie/<id>`):
 
 ```json
-{ "Sun Alley": 2241, "Shark Alarm at Müggel Lake": 185562 }
+{ "Some Untitled Sequel": 123456 }
 ```
 
 Re-run; the cache makes it instant. The script auto-loads `movie_aliases.json` from the current
-directory (or pass `--aliases <path>`). Watched movies almost always resolve; misses are typically
-watchlist/upcoming titles, so nothing you've actually seen is lost.
+directory (or pass `--aliases <path>`). Watched movies almost always resolve; leftover misses are
+typically watchlist/upcoming titles, so nothing you've actually seen is lost.
 
 **Not imported** (the format can't hold it): episode-level watch dates, custom lists, favorites
 (TV Time exports `is_favorited=0` for everything), ratings. See [FORMAT.md](FORMAT.md).

@@ -135,9 +135,33 @@ def load_aliases():
         return {k: int(v) for k, v in json.load(f).items() if not k.startswith("_")}
 
 
+def imdb_lookup(name, year):
+    """Title -> IMDB tt id via IMDB's public suggestion endpoint (no key). IMDB indexes the
+    English/alternate titles TMDB search misses (e.g. 'Sun Alley' -> Sonnenallee). Prefer an
+    exact-year, non-series hit. Unofficial endpoint — best-effort, returns None on any failure."""
+    slug = urllib.parse.quote(name.strip().lower())
+    fp = os.path.join(CACHE, "imdb_" + re.sub(r"[^a-z0-9]+", "_", name.lower()) + ".json")
+    if os.path.exists(fp):
+        data = json.load(open(fp))
+    else:
+        try:
+            with urllib.request.urlopen(f"https://v3.sg.media-imdb.com/suggestion/x/{slug}.json"
+                                        "?includeVideos=0", timeout=20) as r:
+                data = json.load(r)
+        except Exception:
+            return None
+        os.makedirs(CACHE, exist_ok=True)
+        json.dump(data, open(fp, "w"))
+    cands = [it for it in data.get("d", [])
+             if str(it.get("id", "")).startswith("tt") and "series" not in (it.get("q") or "")]
+    if year:
+        cands = [it for it in cands if str(it.get("y")) == str(year)] or cands
+    return cands[0]["id"] if cands else None
+
+
 def find_tmdb_movie(name, year, aliases):
-    """Movie title (+ release year) -> TMDB movie id. Movies have no id in the export,
-    so disambiguate by exact release year before falling back to most-popular."""
+    """Movie title (+ release year) -> TMDB movie id. Movies have no id in the export, so match by
+    title + release year, then fall back to IMDB (which indexes alternate titles TMDB search can't)."""
     if name in aliases:
         return aliases[name]
     if year:
@@ -148,6 +172,11 @@ def find_tmdb_movie(name, year, aliases):
     r = tmdb("search/movie", query=name)
     if r and r.get("results"):
         return r["results"][0]["id"]
+    imdb_id = imdb_lookup(name, year)  # TMDB search blank -> resolve via IMDB, then map id->id
+    if imdb_id:
+        r = tmdb(f"find/{imdb_id}", external_source="imdb_id")
+        if r and r.get("movie_results"):
+            return r["movie_results"][0]["id"]
     return None
 
 
