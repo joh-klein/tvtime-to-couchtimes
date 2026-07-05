@@ -10,8 +10,10 @@ watch dates, follows→active, archived→abandoned, and completed shows correct
 are reported at the end of the run; watched items are essentially always resolvable.
 
 - **Input:** a TV Time GDPR export — request it at
-  [gdpr.tvtime.com/gdpr/self-service](https://gdpr.tvtime.com/gdpr/self-service); arrives by email
-  as a `.zip` of ~50 CSVs
+  [gdpr.tvtime.com/gdpr/self-service](https://gdpr.tvtime.com/gdpr/self-service). It's generated
+  in the portal (a few minutes, depending on how much you've tracked) and downloaded there as a
+  `.zip` of ~50 CSVs. Reset your password first if you've forgotten it. **All account data is
+  deleted after 15 July 2026 — export before then.**
 - **Output:** `couchtimes-import-tvtime.couchtimes`
 - **Script:** `tvtime_to_couchtimes.py` — stdlib only, no dependencies
 
