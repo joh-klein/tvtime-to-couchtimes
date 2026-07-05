@@ -1,0 +1,17 @@
+# Personal data — never commit
+tvtime-gdpr-data/
+*.zip
+*.couchtimes
+
+# TMDB response cache (regenerated on run)
+.tmdb-cache/
+
+# Scratch / old working files
+old/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# macOS
+.DS_Store
