@@ -3,8 +3,9 @@
 
 CouchTimes has no import feature; its .couchtimes backup is raw-DEFLATE'd JSON keyed
 by TMDB ids. TV Time exports TheTVDB ids. This bridges the two via the TMDB API,
-merges watched history / follows / archived status into a COPY of your real backup,
-and writes a new .couchtimes you restore in the app.
+builds a new .couchtimes (shows/movies from your TV Time history, in a fresh backup
+envelope) that you restore in the app. Restore is a FULL REPLACE — it wipes existing
+CouchTimes data; it does not merge into your current library.
 
 Usage:
   export TMDB_TOKEN=<v4 read-access-token OR v3 api key>
@@ -37,8 +38,13 @@ def die(msg):
 
 
 def arg(flag, default=None):
-    """--flag VALUE from argv, else default."""
-    return sys.argv[sys.argv.index(flag) + 1] if flag in sys.argv else default
+    """--flag VALUE from argv, else default. die()s if the flag has no value."""
+    if flag not in sys.argv:
+        return default
+    i = sys.argv.index(flag) + 1
+    if i >= len(sys.argv):
+        die(f"{flag} needs a value")
+    return sys.argv[i]
 
 
 class Export:
@@ -390,6 +396,13 @@ def build_movie(tmdb_id, watched, watched_at, now):
     return m
 
 
+def merge_movie(existing, watched, watched_at, now):
+    """OR watched state of a duplicate (same tmdbId) onto the kept movie, don't drop it."""
+    if watched and not existing["watchedStatus"]:
+        existing["watchedStatus"] = True
+        existing["watchedDate"] = iso_dt(watched_at) or now
+
+
 def merge_into_existing(existing_show, new_show):
     """OR the watched state of new_show onto an already-present show (keep existing metadata)."""
     idx = {(e["seasonNumber"], e["episodeNumber"]): e
@@ -427,9 +440,8 @@ def main():
     follows = read_follows(export)
     tvdb_ids = set(watched) | set(follows)
 
-    only = None
-    if "--test-tvdb" in sys.argv:
-        only = sys.argv[sys.argv.index("--test-tvdb") + 1]
+    only = arg("--test-tvdb")
+    if only:
         tvdb_ids = {only}
         print(f"TEST MODE: single show tvdb={only}")
 
@@ -459,17 +471,17 @@ def main():
         aliases = load_aliases()
         movies = read_movies(export)
         print(f"\nresolving {len(movies)} movies via TMDB ...", f"({len(aliases)} aliases)" if aliases else "")
-        m_added = m_miss = 0; m_misses = []; seen = set()
+        m_added = m_miss = 0; m_misses = []; seen = {}
         for i, m in enumerate(movies.values(), 1):
             mid = find_tmdb_movie(m["name"], m["year"], aliases)
-            if not mid or mid in seen:
-                if not mid:
-                    m_miss += 1; m_misses.append(m["name"])
-                continue
+            if not mid:
+                m_miss += 1; m_misses.append(m["name"]); continue
+            if mid in seen:  # two titles -> one tmdb id: OR watched state on, mirror the show side
+                merge_movie(seen[mid], m["watched"], m["watched_at"], now); continue
             mo = build_movie(mid, m["watched"], m["watched_at"], now)
             if not mo:
                 m_miss += 1; m_misses.append(m["name"]); continue
-            seen.add(mid); backup["movies"].append(mo); m_added += 1
+            seen[mid] = mo; backup["movies"].append(mo); m_added += 1
             if i % 50 == 0:
                 print(f"  [{i}/{len(movies)}] movies added {m_added}")
         print(f"movies: {m_added} added, {m_miss} unresolved.")
